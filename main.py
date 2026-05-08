@@ -5,18 +5,18 @@ This file serves as the entry point for the GitaSending application,
 demonstrating functionality in adherence to the project rules.
 """
 
-from bot import run_bot
+import asyncio
+from send_today import send_daily_gita
 
 
-def example_gitasending_bot():
+def example_gitasending():
     """
-    Example function to showcase the GitaSending functionality.
-    
+    Example function to showcase the GitaSending daily dispatch.
     This function delegates to the distinct functionality defined in
-    the bot module, starting the Telegram polling loop.
+    send_today.py, which is optimized for cron scheduling.
     """
-    print("Showcasing GitaSending Telegram Bot...")
-    run_bot()
+    print("Executing the one-shot daily GitaSending sequence...")
+    asyncio.run(send_daily_gita())
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
     This acts as the entry point, calling example functions to 
     demonstrate features.
     """
-    example_gitasending_bot()
+    example_gitasending()
 
 
 if __name__ == "__main__":
