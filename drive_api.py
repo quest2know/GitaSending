@@ -14,8 +14,9 @@ def get_drive_service():
     # Check if credentials are provided as an Environment Variable (for cloud deployment)
     creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
     if creds_json:
-        creds_info = json.loads(creds_json)
-        creds = Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+        # creds_info = json.loads(creds_json)
+        # For some reason, this expects the raw string, not the parsed dict
+        creds = Credentials.from_service_account_info(creds_json, scopes=SCOPES)
     else:
         # Fallback to local file
         if not os.path.exists(SERVICE_ACCOUNT_FILE):
