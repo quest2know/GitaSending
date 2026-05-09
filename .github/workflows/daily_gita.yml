@@ -2,8 +2,8 @@ name: Daily Gita Dispatch
 
 on:
   schedule:
-    # Runs at 00:30 UTC every day (06:00 AM IST) test -est time 10:30
-    - cron: '30 22 * * *'
+    # Runs at 00:30 UTC every day (06:00 AM IST) test -est time 10 55
+    - cron: '57 3 * * *'
   workflow_dispatch: # Allows you to run it manually from the GitHub Actions tab for testing
 
 permissions:
