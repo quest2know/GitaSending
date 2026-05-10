@@ -12,4 +12,3 @@ wheels/
 # Secrets and State
 .env
 credentials.json
-state.json
