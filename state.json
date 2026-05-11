@@ -5,5 +5,9 @@
         "last_file_index": -1
     },
     "target_chat_id": "8652472759",
-    "last_file_index": -1
+    "last_file_index": 1,
+    "chat_ids": [
+        "8652472759",
+        "8754823808"
+    ]
 }
