@@ -3,6 +3,7 @@ import asyncio
 import logging
 from dotenv import load_dotenv
 import telegram
+from telegram.error import TelegramError
 
 import state
 import drive_api
@@ -15,14 +16,14 @@ async def send_daily_gita():
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     folder_id = os.getenv("DRIVE_FOLDER_ID")
     
-    chat_id = state.get_target_chat_id()
+    chat_ids = state.get_chat_ids()
     
     if not token or not folder_id:
         logger.error("Missing TELEGRAM_BOT_TOKEN or DRIVE_FOLDER_ID in environment.")
         return
         
-    if not chat_id:
-        logger.error("Target Chat ID is not set. Run 'python manage_state.py --set-chat-id <ID>' first.")
+    if not chat_ids:
+        logger.error("No Chat IDs are registered. Run 'python capture_id.py' to add users.")
         return
         
     logger.info("Connecting to Google Drive to fetch the curriculum...")
@@ -35,10 +36,15 @@ async def send_daily_gita():
     last_index = state.get_last_file_index()
     next_index = last_index + 1
     
+    bot = telegram.Bot(token=token)
+    
     if next_index >= len(all_files):
-        logger.info("Curriculum completed! No more files to send.")
-        bot = telegram.Bot(token=token)
-        await bot.send_message(chat_id=chat_id, text="Congratulations! The entire Gita curriculum has been completed.")
+        logger.info("Curriculum completed! Sending completion message to all users.")
+        for chat_id in chat_ids:
+            try:
+                await bot.send_message(chat_id=chat_id, text="Congratulations! The entire Gita curriculum has been completed.")
+            except TelegramError as e:
+                logger.error(f"Failed to send completion message to {chat_id}: {e}")
         return
         
     next_file = all_files[next_index]
@@ -48,23 +54,30 @@ async def send_daily_gita():
     try:
         drive_api.download_file(next_file['id'], temp_path)
         
-        logger.info(f"Uploading {next_file['name']} to Telegram...")
-        bot = telegram.Bot(token=token)
+        logger.info(f"Broadcasting {next_file['name']} to {len(chat_ids)} users...")
         
-        with open(temp_path, 'rb') as audio_file:
-            await bot.send_audio(
-                chat_id=chat_id, 
-                audio=audio_file, 
-                title=next_file['name'],
-                caption=f"Here is your daily recording: {next_file['name']}"
-            )
+        for chat_id in chat_ids:
+            try:
+                with open(temp_path, 'rb') as audio_file:
+                    # We need to seek(0) if we reuse the file handle, 
+                    # but here we are opening it fresh each time or reading it once.
+                    # Since we open it inside the loop, it's fresh.
+                    await bot.send_audio(
+                        chat_id=chat_id, 
+                        audio=audio_file, 
+                        title=next_file['name'],
+                        caption=f"Here is your daily recording: {next_file['name']}"
+                    )
+                logger.info(f"Successfully sent to {chat_id}")
+            except TelegramError as e:
+                logger.error(f"Failed to send to {chat_id}: {e}")
             
-        # Successfully sent, update state
+        # Successfully attempted all, update state index
         state.set_last_file_index(next_index)
-        logger.info(f"Successfully sent {next_file['name']} and updated state index to {next_index}.")
+        logger.info(f"Broadcast complete. Updated state index to {next_index}.")
         
     except Exception as e:
-        logger.error(f"Error during execution: {e}")
+        logger.error(f"Critical error during execution: {e}")
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
