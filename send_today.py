@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import logging
 from dotenv import load_dotenv
@@ -54,6 +55,16 @@ async def send_daily_gita():
     try:
         drive_api.download_file(next_file['id'], temp_path)
         
+        # Fetch text content
+        text_content = drive_api.get_curriculum_text(folder_id)
+        text_message = None
+        if text_content:
+            text_parts = re.split(r'#{2,}', text_content)
+            if next_index < len(text_parts):
+                text_message = text_parts[next_index].strip()
+            else:
+                logger.warning(f"Text file does not have enough segments for index {next_index}")
+        
         logger.info(f"Broadcasting {next_file['name']} to {len(chat_ids)} users...")
         
         for chat_id in chat_ids:
@@ -66,8 +77,12 @@ async def send_daily_gita():
                         chat_id=chat_id, 
                         audio=audio_file, 
                         title=next_file['name'],
-                        caption=f"Here is your daily recording: {next_file['name']}"
+                        caption=""
                     )
+                
+                if text_message:
+                    await bot.send_message(chat_id=chat_id, text=text_message)
+                    
                 logger.info(f"Successfully sent to {chat_id}")
             except TelegramError as e:
                 logger.error(f"Failed to send to {chat_id}: {e}")

@@ -97,3 +97,41 @@ def download_file(file_id, output_path):
             status, done = downloader.next_chunk()
             
     return output_path
+
+def get_curriculum_text(parent_folder_id):
+    """
+    Finds a .txt file in the main folder and returns its content as a string.
+    Returns None if no such file is found.
+    """
+    if "drive.google.com/drive/folders/" in parent_folder_id:
+        parent_folder_id = parent_folder_id.split("drive.google.com/drive/folders/")[-1].split("?")[0]
+        
+    service = get_drive_service()
+    
+    file_query = f"'{parent_folder_id}' in parents and trashed = false and name contains '.txt'"
+    file_results = service.files().list(
+        q=file_query, 
+        fields="files(id, name)", 
+        pageSize=10,
+        includeItemsFromAllDrives=True,
+        supportsAllDrives=True
+    ).execute()
+    files = file_results.get('files', [])
+    
+    txt_file = None
+    for f in files:
+        if f['name'].lower().endswith('.txt'):
+            txt_file = f
+            break
+            
+    if not txt_file:
+        return None
+        
+    request = service.files().get_media(fileId=txt_file['id'], supportsAllDrives=True)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while done is False:
+        status, done = downloader.next_chunk()
+        
+    return fh.getvalue().decode('utf-8')
